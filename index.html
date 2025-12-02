@@ -366,8 +366,6 @@
                 <img id="preview">
                 <div class="spinner" id="spinner"></div>
                 
-                <button id="classifyBtn" style="display: none;">🔍 분류하기</button>
-                
                 <div id="result"></div>
                 
                 <button id="shareBtn" style="display: none; margin-top: 15px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">📤 공유하기</button>
@@ -473,13 +471,18 @@
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const preview = document.getElementById('preview');
-        const classifyBtn = document.getElementById('classifyBtn');
         const result = document.getElementById('result');
         const spinner = document.getElementById('spinner');
         const errorDiv = document.getElementById('error');
         const historyList = document.getElementById('historyList');
         const shareBtn = document.getElementById('shareBtn');
         const statsContent = document.getElementById('statsContent');
+        
+        // 분류 버튼 동적 생성
+        const classifyBtn = document.createElement('button');
+        classifyBtn.id = 'classifyBtn';
+        classifyBtn.style.display = 'none';
+        preview.parentNode.insertBefore(classifyBtn, preview.nextSibling);
 
         let selectedFile = null;
         let currentUser = null;
