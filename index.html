@@ -130,6 +130,50 @@
 
         const API_URL = 'https://garbage-classifier-16970477973.asia-northeast3.run.app';
 
+        // 분류 라벨 한글 번역 및 처리 방법
+        const wasteInfo = {
+            'Battery': {
+                label: '배터리',
+                disposal: '🔋 배터리: 전용 수거함에 배출 (주민센터, 대형마트)'
+            },
+            'Biological': {
+                label: '음식물쓰레기',
+                disposal: '🥬 음식물: 물기 제거 후 전용 수거함에 배출'
+            },
+            'Cardboard': {
+                label: '골판지',
+                disposal: '📦 골판지: 테이프/상표 제거 후 펴서 배출'
+            },
+            'Clothes': {
+                label: '의류',
+                disposal: '👕 의류: 깨끗이 세탁 후 의류수거함 또는 재활용센터'
+            },
+            'Glass': {
+                label: '유리',
+                disposal: '🍾 유리병: 내용물 비우고 뚜껑 분리 후 배출'
+            },
+            'Metal': {
+                label: '금속',
+                disposal: '🥫 캔류: 내용물 제거 후 압착하여 배출'
+            },
+            'Paper': {
+                label: '종이',
+                disposal: '📄 종이류: 비닐/철심 제거 후 배출'
+            },
+            'Plastic': {
+                label: '플라스틱',
+                disposal: '♻️ 플라스틱: 라벨 제거, 깨끗이 씻어서 배출'
+            },
+            'Shoes': {
+                label: '신발',
+                disposal: '👟 신발: 재활용센터 또는 의류수거함에 배출'
+            },
+            'Trash': {
+                label: '일반쓰레기',
+                disposal: '🗑️ 일반쓰레기: 종량제봉투에 배출'
+            }
+        };
+
         // DOM 요소
         const loginScreen = document.getElementById('loginScreen');
         const mainScreen = document.getElementById('mainScreen');
@@ -265,9 +309,28 @@
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
+                    // 라벨 정보 가져오기
+                    const labelInfo = wasteInfo[data.prediction.label] || {
+                        label: data.prediction.label,
+                        disposal: '분류 정보가 없습니다.'
+                    };
+                    
                     // 결과 표시
-                    resultLabel.textContent = `분류 결과: ${data.prediction.label}`;
+                    resultLabel.textContent = `분류 결과: ${labelInfo.label}`;
                     resultScore.textContent = `신뢰도: ${(data.prediction.score * 100).toFixed(2)}%`;
+                    
+                    // 처리 방법 추가
+                    const disposalInfo = document.createElement('div');
+                    disposalInfo.style.cssText = 'margin-top: 15px; padding: 15px; background: #e8f5e9; border-radius: 10px; color: #2e7d32; font-weight: bold;';
+                    disposalInfo.textContent = labelInfo.disposal;
+                    result.innerHTML = '';
+                    result.appendChild(document.createTextNode(`분류 결과: ${labelInfo.label}`));
+                    result.appendChild(document.createElement('br'));
+                    const scoreSpan = document.createElement('span');
+                    scoreSpan.className = 'result-score';
+                    scoreSpan.textContent = `신뢰도: ${(data.prediction.score * 100).toFixed(2)}%`;
+                    result.appendChild(scoreSpan);
+                    result.appendChild(disposalInfo);
                     result.style.display = 'block';
                     
                     // Firebase Storage에 이미지 업로드
@@ -281,7 +344,8 @@
                         userId: currentUser.uid,
                         userName: currentUser.displayName,
                         imageUrl: imageUrl,
-                        label: data.prediction.label,
+                        label: labelInfo.label,  // 한글 라벨 저장
+                        labelEn: data.prediction.label,  // 영어 라벨도 저장
                         score: data.prediction.score,
                         timestamp: new Date()
                     };
