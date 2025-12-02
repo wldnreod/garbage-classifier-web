@@ -384,7 +384,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, query, where, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
@@ -476,20 +476,6 @@
         let selectedFile = null;
         let currentUser = null;
 
-        // 리다이렉트 결과 처리 (페이지 로드시)
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result && result.user) {
-                    console.log('리다이렉트 로그인 성공:', result.user.displayName);
-                }
-            })
-            .catch((error) => {
-                console.error('리다이렉트 로그인 오류:', error);
-                if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-                    alert('로그인 실패: ' + error.message);
-                }
-            });
-
         // 로그인 상태 감지
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -506,14 +492,14 @@
             }
         });
 
-        // Google 로그인 (모든 기기에서 리다이렉트 방식 사용)
+        // Google 로그인
         googleLoginBtn.addEventListener('click', async () => {
             const provider = new GoogleAuthProvider();
             try {
-                await signInWithRedirect(auth, provider);
+                await signInWithPopup(auth, provider);
             } catch (error) {
                 if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-                    alert('로그인 실패: ' + error.message);
+                    console.error('로그인 오류:', error);
                 }
             }
         });
