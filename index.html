@@ -331,6 +331,7 @@
             <div class="tabs">
                 <button class="tab active" id="classifyTabBtn">분류하기</button>
                 <button class="tab" id="historyTabBtn">내 기록</button>
+                <button class="tab" id="statsTabBtn">통계</button>
             </div>
             
             <!-- 분류 탭 -->
@@ -343,11 +344,11 @@
                 <img id="preview">
                 <div class="spinner" id="spinner"></div>
                 
-                <button id="classifyBtn" style="display: none;">분류하기</button>
+                <div id="result"></div>
                 
-                <div id="result">
-                    <div class="result-label" id="resultLabel"></div>
-                    <div class="result-score" id="resultScore"></div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;" id="actionButtons">
+                    <button id="newImageBtn" style="display: none; flex: 1;">🔄 다시 분류하기</button>
+                    <button id="shareBtn" style="display: none; flex: 1; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">📤 공유하기</button>
                 </div>
                 
                 <div class="error" id="error"></div>
@@ -356,6 +357,11 @@
             <!-- 히스토리 탭 -->
             <div id="historyTab">
                 <div id="historyList"></div>
+            </div>
+            
+            <!-- 통계 탭 -->
+            <div id="statsTab" style="display: none;">
+                <div id="statsContent"></div>
             </div>
         </div>
     </div>
@@ -438,19 +444,22 @@
         
         const classifyTabBtn = document.getElementById('classifyTabBtn');
         const historyTabBtn = document.getElementById('historyTabBtn');
+        const statsTabBtn = document.getElementById('statsTabBtn');
         const classifyTab = document.getElementById('classifyTab');
         const historyTab = document.getElementById('historyTab');
+        const statsTab = document.getElementById('statsTab');
         
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const preview = document.getElementById('preview');
-        const classifyBtn = document.getElementById('classifyBtn');
         const result = document.getElementById('result');
-        const resultLabel = document.getElementById('resultLabel');
-        const resultScore = document.getElementById('resultScore');
         const spinner = document.getElementById('spinner');
         const errorDiv = document.getElementById('error');
         const historyList = document.getElementById('historyList');
+        const newImageBtn = document.getElementById('newImageBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const actionButtons = document.getElementById('actionButtons');
+        const statsContent = document.getElementById('statsContent');
 
         let selectedFile = null;
         let currentUser = null;
@@ -490,16 +499,30 @@
         classifyTabBtn.addEventListener('click', () => {
             classifyTabBtn.classList.add('active');
             historyTabBtn.classList.remove('active');
+            statsTabBtn.classList.remove('active');
             classifyTab.style.display = 'block';
             historyTab.style.display = 'none';
+            statsTab.style.display = 'none';
         });
 
         historyTabBtn.addEventListener('click', () => {
             historyTabBtn.classList.add('active');
             classifyTabBtn.classList.remove('active');
+            statsTabBtn.classList.remove('active');
             historyTab.style.display = 'block';
             classifyTab.style.display = 'none';
+            statsTab.style.display = 'none';
             loadHistory();
+        });
+        
+        statsTabBtn.addEventListener('click', () => {
+            statsTabBtn.classList.add('active');
+            classifyTabBtn.classList.remove('active');
+            historyTabBtn.classList.remove('active');
+            statsTab.style.display = 'block';
+            classifyTab.style.display = 'none';
+            historyTab.style.display = 'none';
+            loadStats();
         });
 
         // 파일 업로드
@@ -534,21 +557,53 @@
             reader.onload = (e) => {
                 preview.src = e.target.result;
                 preview.style.display = 'block';
-                classifyBtn.style.display = 'block';
                 result.style.display = 'none';
                 errorDiv.style.display = 'none';
+                newImageBtn.style.display = 'none';
+                shareBtn.style.display = 'none';
+                // 자동으로 분류 시작
+                classifyImage();
             };
             reader.readAsDataURL(file);
         }
         
-        // 분류하기
-        classifyBtn.addEventListener('click', async () => {
+        // 다시 분류하기 버튼
+        newImageBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 공유하기 버튼
+        let currentResult = null;
+        shareBtn.addEventListener('click', async () => {
+            if (!currentResult) return;
+            
+            const shareText = `🗑️ 쓰레기 분류 결과: ${currentResult.label}\n정확도: ${(currentResult.score * 100).toFixed(1)}%\n${currentResult.disposal}`;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: '쓰레기 분류 결과',
+                        text: shareText
+                    });
+                } catch (err) {
+                    console.log('공유 취소:', err);
+                }
+            } else {
+                // 클립보드 복사
+                navigator.clipboard.writeText(shareText);
+                alert('결과가 클립보드에 복사되었습니다!');
+            }
+        });
+        
+        // 분류하기 함수
+        async function classifyImage() {
             if (!selectedFile || !currentUser) return;
             
-            classifyBtn.disabled = true;
             spinner.style.display = 'block';
             result.style.display = 'none';
             errorDiv.style.display = 'none';
+            newImageBtn.style.display = 'none';
+            shareBtn.style.display = 'none';
             
             const formData = new FormData();
             formData.append('file', selectedFile);
@@ -573,12 +628,21 @@
                     };
                     
                     // 결과 표시 - 깔끔하게 구조화
+                    // 현재 결과 저장
+                    currentResult = {
+                        label: labelInfo.label,
+                        score: data.prediction.score,
+                        disposal: labelInfo.disposal
+                    };
+                    
                     result.innerHTML = `
                         <div class="result-label">${labelInfo.label}</div>
                         <div class="result-score">정확도 ${(data.prediction.score * 100).toFixed(1)}%</div>
                         <div class="disposal-info">${labelInfo.disposal}</div>
                     `;
                     result.style.display = 'block';
+                    newImageBtn.style.display = 'block';
+                    shareBtn.style.display = 'block';
                     
                     // Firebase Storage에 이미지 업로드
                     const timestamp = Date.now();
@@ -613,9 +677,8 @@
                 errorDiv.style.display = 'block';
             } finally {
                 spinner.style.display = 'none';
-                classifyBtn.disabled = false;
             }
-        });
+        }
 
         // 히스토리 로드
         async function loadHistory() {
@@ -654,6 +717,104 @@
                 });
             } catch (error) {
                 historyList.innerHTML = `<div class="error" style="display: block;">기록 로드 실패: ${error.message}</div>`;
+            }
+        }
+        
+        // 통계 로드
+        async function loadStats() {
+            if (!currentUser) return;
+            
+            statsContent.innerHTML = '<div class="spinner" style="display: block;"></div>';
+            
+            try {
+                const q = query(
+                    collection(db, 'classifications'),
+                    where('userId', '==', currentUser.uid)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    statsContent.innerHTML = '<div class="no-history">통계 데이터가 없습니다</div>';
+                    return;
+                }
+                
+                // 통계 데이터 수집
+                const stats = {};
+                let totalCount = 0;
+                let totalScore = 0;
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    totalCount++;
+                    totalScore += data.score;
+                    
+                    if (stats[data.label]) {
+                        stats[data.label]++;
+                    } else {
+                        stats[data.label] = 1;
+                    }
+                });
+                
+                // 통계 정렬 (많이 분류한 순)
+                const sortedStats = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+                
+                // 통계 HTML 생성
+                let statsHTML = `
+                    <div style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 30px; border-radius: 16px; margin-bottom: 25px; border: 2px solid #e2e8f0;">
+                        <h2 style="color: #1a202c; margin-bottom: 20px; font-size: 1.8em;">📊 나의 분류 통계</h2>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
+                            <div style="background: white; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2.5em; font-weight: 800; color: #667eea;">${totalCount}</div>
+                                <div style="color: #718096; margin-top: 8px; font-weight: 600;">총 분류 횟수</div>
+                            </div>
+                            <div style="background: white; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2.5em; font-weight: 800; color: #48bb78;">${(totalScore / totalCount * 100).toFixed(1)}%</div>
+                                <div style="color: #718096; margin-top: 8px; font-weight: 600;">평균 정확도</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; padding: 30px; border-radius: 16px; border: 2px solid #e2e8f0;">
+                        <h3 style="color: #1a202c; margin-bottom: 20px; font-size: 1.4em;">🏆 분류 순위</h3>
+                `;
+                
+                sortedStats.forEach(([label, count], index) => {
+                    const percentage = (count / totalCount * 100).toFixed(1);
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '📌';
+                    
+                    statsHTML += `
+                        <div style="margin-bottom: 15px; padding: 15px; background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%); border-radius: 12px; border-left: 4px solid #667eea;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 1.5em;">${medal}</span>
+                                    <span style="font-weight: 700; font-size: 1.2em; color: #2d3748;">${label}</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 1.4em; font-weight: 800; color: #667eea;">${count}회</div>
+                                    <div style="font-size: 0.9em; color: #a0aec0;">${percentage}%</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 10px; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: ${percentage}%; transition: width 0.5s;"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                statsHTML += `
+                    </div>
+                    
+                    <div style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%); border-radius: 16px; text-align: center; border: 2px solid #81e6d9;">
+                        <div style="font-size: 1.1em; color: #234e52; font-weight: 600;">
+                            🌱 지금까지 ${totalCount}개의 쓰레기를 올바르게 분류했어요!
+                        </div>
+                    </div>
+                `;
+                
+                statsContent.innerHTML = statsHTML;
+            } catch (error) {
+                statsContent.innerHTML = `<div class="error" style="display: block;">통계 로드 실패: ${error.message}</div>`;
             }
         }
     </script>
