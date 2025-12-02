@@ -577,22 +577,30 @@
             reader.onload = (e) => {
                 preview.src = e.target.result;
                 preview.style.display = 'block';
+                classifyBtn.textContent = '🔍 분류하기';
                 classifyBtn.style.display = 'block';
+                classifyBtn.disabled = false;
                 result.style.display = 'none';
                 errorDiv.style.display = 'none';
                 shareBtn.style.display = 'none';
+                // 분류 버튼 이벤트 리셋
+                classifyBtn.onclick = null;
             };
             reader.readAsDataURL(file);
         }
         
         // 분류하기 버튼
         classifyBtn.addEventListener('click', async () => {
-            classifyBtn.disabled = true;
-            await classifyImage();
-            classifyBtn.textContent = '🔄 다시 선택하기';
-            classifyBtn.disabled = false;
-            classifyBtn.style.display = 'block';
-            classifyBtn.onclick = () => fileInput.click();
+            if (classifyBtn.textContent.includes('다시 선택')) {
+                // 다시 선택하기 모드
+                fileInput.click();
+            } else {
+                // 분류하기 모드
+                classifyBtn.disabled = true;
+                await classifyImage();
+                classifyBtn.textContent = '🔄 다시 선택하기';
+                classifyBtn.disabled = false;
+            }
         });
         
         // 공유하기 버튼
