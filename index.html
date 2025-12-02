@@ -366,7 +366,7 @@
                 <img id="preview">
                 <div class="spinner" id="spinner"></div>
                 
-                <button id="classifyBtn">🔍 분류하기</button>
+                <button id="classifyBtn" style="display: none;">🔍 분류하기</button>
                 
                 <div id="result"></div>
                 
@@ -577,6 +577,7 @@
             reader.onload = (e) => {
                 preview.src = e.target.result;
                 preview.style.display = 'block';
+                classifyBtn.style.display = 'block';
                 classifyBtn.textContent = '🔍 분류하기';
                 classifyBtn.disabled = false;
                 result.style.display = 'none';
