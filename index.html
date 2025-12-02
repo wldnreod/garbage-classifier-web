@@ -308,11 +308,14 @@
                 
                 const data = await response.json();
                 
+                // 디버깅: 받은 라벨 확인
+                console.log('받은 라벨:', data.prediction.label);
+                
                 if (response.ok && data.success) {
                     // 라벨 정보 가져오기
                     const labelInfo = wasteInfo[data.prediction.label] || {
                         label: data.prediction.label,
-                        disposal: '분류 정보가 없습니다.'
+                        disposal: `분류 정보가 없습니다. (받은 라벨: ${data.prediction.label})`
                     };
                     
                     // 결과 표시
