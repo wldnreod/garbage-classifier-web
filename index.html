@@ -346,7 +346,7 @@
             <div class="user-info">
                 <img id="userPhoto" src="" alt="User">
                 <span class="user-name" id="userName"></span>
-                <button class="logout-btn" id="logoutBtn" title="로그아웃">⏻</button>
+                <button class="logout-btn" id="logoutBtn" title="로그아웃">🚪</button>
             </div>
             
             <!-- 탭 메뉴 -->
@@ -365,8 +365,6 @@
                 
                 <img id="preview">
                 <div class="spinner" id="spinner"></div>
-                
-                <button id="classifyBtn" style="display: none;">🔍 분류하기</button>
                 
                 <div id="result"></div>
                 
@@ -473,13 +471,15 @@
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const preview = document.getElementById('preview');
-        const classifyBtn = document.getElementById('classifyBtn');
         const result = document.getElementById('result');
         const spinner = document.getElementById('spinner');
         const errorDiv = document.getElementById('error');
         const historyList = document.getElementById('historyList');
         const shareBtn = document.getElementById('shareBtn');
         const statsContent = document.getElementById('statsContent');
+        
+        // 분류 버튼 동적 생성
+        let classifyBtn = null;
 
         let selectedFile = null;
         let currentUser = null;
@@ -577,29 +577,36 @@
             reader.onload = (e) => {
                 preview.src = e.target.result;
                 preview.style.display = 'block';
-                classifyBtn.style.display = 'block';
-                classifyBtn.textContent = '🔍 분류하기';
-                classifyBtn.disabled = false;
+                
+                // 분류 버튼이 없으면 생성
+                if (!classifyBtn) {
+                    classifyBtn = document.createElement('button');
+                    classifyBtn.id = 'classifyBtn';
+                    classifyBtn.textContent = '🔍 분류하기';
+                    spinner.parentNode.insertBefore(classifyBtn, spinner.nextSibling);
+                    
+                    // 분류하기 버튼 이벤트
+                    classifyBtn.addEventListener('click', async () => {
+                        if (classifyBtn.textContent.includes('다시 선택')) {
+                            fileInput.click();
+                        } else {
+                            classifyBtn.disabled = true;
+                            await classifyImage();
+                            classifyBtn.textContent = '🔄 다시 선택하기';
+                            classifyBtn.disabled = false;
+                        }
+                    });
+                } else {
+                    classifyBtn.textContent = '🔍 분류하기';
+                    classifyBtn.disabled = false;
+                }
+                
                 result.style.display = 'none';
                 errorDiv.style.display = 'none';
                 shareBtn.style.display = 'none';
             };
             reader.readAsDataURL(file);
         }
-        
-        // 분류하기 버튼
-        classifyBtn.addEventListener('click', async () => {
-            if (classifyBtn.textContent.includes('다시 선택')) {
-                // 다시 선택하기 모드
-                fileInput.click();
-            } else {
-                // 분류하기 모드
-                classifyBtn.disabled = true;
-                await classifyImage();
-                classifyBtn.textContent = '🔄 다시 선택하기';
-                classifyBtn.disabled = false;
-            }
-        });
         
         // 공유하기 버튼
         let currentResult = null;
