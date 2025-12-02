@@ -277,15 +277,21 @@
                     const imageUrl = await getDownloadURL(imageRef);
                     
                     // Firestore에 분석 결과 저장
-                    await addDoc(collection(db, 'classifications'), {
+                    const docData = {
                         userId: currentUser.uid,
                         userName: currentUser.displayName,
                         imageUrl: imageUrl,
                         label: data.prediction.label,
                         score: data.prediction.score,
-                        timestamp: new Date(),
-                        inferenceTime: data.inference_time_ms
-                    });
+                        timestamp: new Date()
+                    };
+                    
+                    // inferenceTime이 있으면 추가
+                    if (data.inference_time_ms !== undefined) {
+                        docData.inferenceTime = data.inference_time_ms;
+                    }
+                    
+                    await addDoc(collection(db, 'classifications'), docData);
                     
                     alert('분석 결과가 저장되었습니다!');
                 } else {
