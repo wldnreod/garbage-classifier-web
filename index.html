@@ -349,8 +349,23 @@
                 <button class="logout-btn" id="logoutBtn" title="로그아웃">🚪</button>
             </div>
             
+            <!-- 업로드 영역 (항상 표시) -->
+            <div class="upload-area" id="uploadArea">
+                <p>📸 이미지를 클릭하거나 드래그하여 업로드</p>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+            
+            <img id="preview">
+            <div class="spinner" id="spinner"></div>
+            
+            <div id="result"></div>
+            
+            <button id="shareBtn" style="display: none; margin-top: 15px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">📤 공유하기</button>
+            
+            <div class="error" id="error"></div>
+            
             <!-- 탭 메뉴 -->
-            <div class="tabs">
+            <div class="tabs" style="margin-top: 30px;">
                 <button class="tab active" id="historyTabBtn">내 기록</button>
                 <button class="tab" id="statsTabBtn">통계</button>
             </div>
@@ -448,9 +463,18 @@
         const historyTab = document.getElementById('historyTab');
         const statsTab = document.getElementById('statsTab');
         
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const result = document.getElementById('result');
+        const spinner = document.getElementById('spinner');
+        const errorDiv = document.getElementById('error');
         const historyList = document.getElementById('historyList');
+        const shareBtn = document.getElementById('shareBtn');
         const statsContent = document.getElementById('statsContent');
-
+        
+        let classifyBtn = null;
+        let selectedFile = null;
         let currentUser = null;
 
         // 로그인 상태 감지
@@ -500,6 +524,170 @@
             historyTab.style.display = 'none';
             loadStats();
         });
+
+        // 파일 업로드
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleFile(file);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+        
+        function handleFile(file) {
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                
+                // 분류 버튼이 없으면 생성
+                if (!classifyBtn) {
+                    classifyBtn = document.createElement('button');
+                    classifyBtn.id = 'classifyBtn';
+                    classifyBtn.textContent = '🔍 분류하기';
+                    spinner.parentNode.insertBefore(classifyBtn, spinner.nextSibling);
+                    
+                    // 분류하기 버튼 이벤트
+                    classifyBtn.addEventListener('click', async () => {
+                        if (classifyBtn.textContent.includes('다시 선택')) {
+                            fileInput.click();
+                        } else {
+                            classifyBtn.disabled = true;
+                            await classifyImage();
+                            classifyBtn.textContent = '🔄 다시 선택하기';
+                            classifyBtn.disabled = false;
+                        }
+                    });
+                } else {
+                    classifyBtn.textContent = '🔍 분류하기';
+                    classifyBtn.disabled = false;
+                }
+                
+                result.style.display = 'none';
+                errorDiv.style.display = 'none';
+                shareBtn.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 공유하기 버튼
+        let currentResult = null;
+        shareBtn.addEventListener('click', async () => {
+            if (!currentResult) return;
+            
+            const shareText = `🗑️ 쓰레기 분류 결과: ${currentResult.label}\n정확도: ${(currentResult.score * 100).toFixed(1)}%\n${currentResult.disposal}`;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: '쓰레기 분류 결과',
+                        text: shareText
+                    });
+                } catch (err) {
+                    console.log('공유 취소:', err);
+                }
+            } else {
+                // 클립보드 복사
+                navigator.clipboard.writeText(shareText);
+                alert('결과가 클립보드에 복사되었습니다!');
+            }
+        });
+        
+        // 분류하기 함수
+        async function classifyImage() {
+            if (!selectedFile || !currentUser) return;
+            
+            spinner.style.display = 'block';
+            result.style.display = 'none';
+            errorDiv.style.display = 'none';
+            shareBtn.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            try {
+                const response = await fetch('https://garbage-classifier-16970477973.asia-northeast3.run.app/classify', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                spinner.style.display = 'none';
+                
+                // API label을 소문자로 변환
+                const labelKey = data.prediction.label.toLowerCase();
+                const labelInfo = wasteInfo[labelKey];
+                
+                if (labelInfo) {
+                    result.innerHTML = `
+                        <div class="result-box">
+                            <h2>분류 결과</h2>
+                            <div class="result-label">${labelInfo.label}</div>
+                            <div class="result-score">정확도: ${(data.prediction.score * 100).toFixed(1)}%</div>
+                            <div class="result-info">${labelInfo.disposal}</div>
+                        </div>
+                    `;
+                    result.style.display = 'block';
+                    shareBtn.style.display = 'block';
+                    
+                    currentResult = {
+                        label: labelInfo.label,
+                        score: data.prediction.score,
+                        disposal: labelInfo.disposal
+                    };
+                    
+                    // Firestore에 저장
+                    await saveToHistory(labelInfo.label, data.prediction.score);
+                } else {
+                    throw new Error('알 수 없는 분류 결과');
+                }
+            } catch (error) {
+                spinner.style.display = 'none';
+                errorDiv.textContent = '분류 중 오류가 발생했습니다: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        // Firestore에 저장
+        async function saveToHistory(label, score) {
+            try {
+                // Firebase Storage에 이미지 업로드
+                const timestamp = Date.now();
+                const imageRef = ref(storage, `images/${currentUser.uid}/${timestamp}_${selectedFile.name}`);
+                await uploadBytes(imageRef, selectedFile);
+                const imageUrl = await getDownloadURL(imageRef);
+                
+                // Firestore에 분석 결과 저장
+                await addDoc(collection(db, 'classifications'), {
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName,
+                    imageUrl: imageUrl,
+                    label: label,
+                    score: score,
+                    timestamp: new Date()
+                });
+            } catch (error) {
+                console.error('저장 오류:', error);
+            }
+        }
 
         // 히스토리 로드
         async function loadHistory() {
