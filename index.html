@@ -105,26 +105,20 @@
             white-space: nowrap;
         }
         .logout-btn { 
-            background: #b91c1c; 
-            color: white; 
+            background: transparent; 
+            color: #b91c1c; 
             border: none; 
-            padding: 0; 
-            border-radius: 50%; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
             cursor: pointer; 
-            font-size: 1.2em; 
+            font-size: 0.85em; 
             transition: all 0.2s;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            box-shadow: 0 3px 10px rgba(185, 28, 28, 0.3);
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
         .logout-btn:hover {
-            background: #991b1b;
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(185, 28, 28, 0.5);
+            background: #fee2e2;
+            color: #991b1b;
         }
         
         /* 탭 메뉴 */
@@ -345,7 +339,7 @@
             <div class="user-info">
                 <img id="userPhoto" src="" alt="User">
                 <span class="user-name" id="userName"></span>
-                <button class="logout-btn" id="logoutBtn" title="로그아웃">🚪</button>
+                <button class="logout-btn" id="logoutBtn" title="로그아웃">logout</button>
             </div>
             
             <!-- 업로드 영역 (항상 표시) -->
