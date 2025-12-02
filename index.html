@@ -105,22 +105,27 @@
             white-space: nowrap;
         }
         .logout-btn { 
-            background: white; 
-            color: #ef4444; 
-            border: 2px solid #ef4444; 
-            padding: 8px 20px; 
-            border-radius: 10px; 
+            background: #fee2e2; 
+            color: #dc2626; 
+            border: 2px solid #dc2626; 
+            padding: 0; 
+            border-radius: 50%; 
             cursor: pointer; 
-            font-size: 0.95em; 
-            font-weight: 700;
+            font-size: 1.4em; 
             transition: all 0.2s;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
         }
         .logout-btn:hover {
-            background: #ef4444;
+            background: #dc2626;
             color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
         }
         
         /* 탭 메뉴 */
@@ -341,7 +346,7 @@
             <div class="user-info">
                 <img id="userPhoto" src="" alt="User">
                 <span class="user-name" id="userName"></span>
-                <button class="logout-btn" id="logoutBtn">로그아웃</button>
+                <button class="logout-btn" id="logoutBtn" title="로그아웃">⏻</button>
             </div>
             
             <!-- 탭 메뉴 -->
@@ -365,10 +370,7 @@
                 
                 <div id="result"></div>
                 
-                <div style="display: flex; gap: 10px; margin-top: 15px;" id="actionButtons">
-                    <button id="newImageBtn" style="display: none; flex: 1;">🔄 다시 선택하기</button>
-                    <button id="shareBtn" style="display: none; flex: 1; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">📤 공유하기</button>
-                </div>
+                <button id="shareBtn" style="display: none; margin-top: 15px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">📤 공유하기</button>
                 
                 <div class="error" id="error"></div>
             </div>
@@ -476,9 +478,7 @@
         const spinner = document.getElementById('spinner');
         const errorDiv = document.getElementById('error');
         const historyList = document.getElementById('historyList');
-        const newImageBtn = document.getElementById('newImageBtn');
         const shareBtn = document.getElementById('shareBtn');
-        const actionButtons = document.getElementById('actionButtons');
         const statsContent = document.getElementById('statsContent');
 
         let selectedFile = null;
@@ -580,7 +580,6 @@
                 classifyBtn.style.display = 'block';
                 result.style.display = 'none';
                 errorDiv.style.display = 'none';
-                newImageBtn.style.display = 'none';
                 shareBtn.style.display = 'none';
             };
             reader.readAsDataURL(file);
@@ -588,13 +587,12 @@
         
         // 분류하기 버튼
         classifyBtn.addEventListener('click', async () => {
-            classifyBtn.style.display = 'none';
+            classifyBtn.disabled = true;
             await classifyImage();
-        });
-        
-        // 다시 선택하기 버튼
-        newImageBtn.addEventListener('click', () => {
-            fileInput.click();
+            classifyBtn.textContent = '🔄 다시 선택하기';
+            classifyBtn.disabled = false;
+            classifyBtn.style.display = 'block';
+            classifyBtn.onclick = () => fileInput.click();
         });
         
         // 공유하기 버튼
@@ -627,7 +625,6 @@
             spinner.style.display = 'block';
             result.style.display = 'none';
             errorDiv.style.display = 'none';
-            newImageBtn.style.display = 'none';
             shareBtn.style.display = 'none';
             
             const formData = new FormData();
@@ -669,7 +666,6 @@
                         <div class="disposal-info">${labelInfo.disposal}</div>
                     `;
                     result.style.display = 'block';
-                    newImageBtn.style.display = 'block';
                     shareBtn.style.display = 'block';
                     
                     // Firebase Storage에 이미지 업로드
