@@ -566,18 +566,24 @@
                     
                     // 분류하기 버튼 이벤트
                     classifyBtn.addEventListener('click', async () => {
-                        if (classifyBtn.textContent.includes('다시 선택')) {
-                            fileInput.click();
+                        if (classifyBtn.textContent.includes('다시')) {
+                            // 다시 분석하기 모드
+                            result.style.display = 'none';
+                            shareBtn.style.display = 'none';
+                            errorDiv.style.display = 'none';
+                            classifyBtn.textContent = '🔍 분류하기';
                         } else {
+                            // 분류하기 모드
                             classifyBtn.disabled = true;
                             await classifyImage();
-                            classifyBtn.textContent = '🔄 다시 선택하기';
+                            classifyBtn.textContent = '🔄 다시 분석하기';
                             classifyBtn.disabled = false;
                         }
                     });
                 } else {
                     classifyBtn.textContent = '🔍 분류하기';
                     classifyBtn.disabled = false;
+                    classifyBtn.style.display = 'block';
                 }
                 
                 result.style.display = 'none';
@@ -627,9 +633,19 @@
                     method: 'POST',
                     body: formData
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 spinner.style.display = 'none';
+                
+                // API 응답 구조 확인
+                if (!data || !data.prediction || !data.prediction.label) {
+                    throw new Error('잘못된 API 응답 형식입니다');
+                }
                 
                 // API label을 소문자로 변환
                 const labelKey = data.prediction.label.toLowerCase();
@@ -656,12 +672,13 @@
                     // Firestore에 저장
                     await saveToHistory(labelInfo.label, data.prediction.score);
                 } else {
-                    throw new Error('알 수 없는 분류 결과');
+                    throw new Error(`알 수 없는 분류 결과: ${data.prediction.label}`);
                 }
             } catch (error) {
                 spinner.style.display = 'none';
                 errorDiv.textContent = '분류 중 오류가 발생했습니다: ' + error.message;
                 errorDiv.style.display = 'block';
+                console.error('분류 오류:', error);
             }
         }
         
